@@ -1,0 +1,85 @@
+package com.cannonremote.app.data
+
+import android.content.Context
+import android.content.SharedPreferences
+
+/** 应用偏好：记住的相机设备、拍摄参数。 */
+class AppPrefs(context: Context) {
+
+    data class RememberedDevice(val address: String, val name: String)
+
+    private val sp: SharedPreferences =
+        context.getSharedPreferences("canon_remote_prefs", Context.MODE_PRIVATE)
+
+    /** 记住的相机（配对成功后保存，下次启动自动连接）。 */
+    var rememberedDevice: RememberedDevice?
+        get() = sp.getString(KEY_DEVICE_ADDRESS, null)?.let {
+            RememberedDevice(it, sp.getString(KEY_DEVICE_NAME, "").orEmpty())
+        }
+        set(value) {
+            sp.edit().apply {
+                if (value == null) {
+                    remove(KEY_DEVICE_ADDRESS)
+                    remove(KEY_DEVICE_NAME)
+                } else {
+                    putString(KEY_DEVICE_ADDRESS, value.address)
+                    putString(KEY_DEVICE_NAME, value.name)
+                }
+            }.apply()
+        }
+
+    /**
+     * “拍一张”时，按下快门指令与松开快门指令之间的间隔（毫秒）。
+     * 一般 100–300ms，默认 150ms。
+     */
+    var shutterHoldMs: Int
+        get() = sp.getInt(KEY_SHUTTER_HOLD_MS, DEFAULT_SHUTTER_HOLD_MS)
+        set(value) {
+            sp.edit()
+                .putInt(KEY_SHUTTER_HOLD_MS, value.coerceIn(MIN_SHUTTER_HOLD_MS, MAX_SHUTTER_HOLD_MS))
+                .apply()
+        }
+
+    /** 延时拍摄秒数（界面记忆） */
+    var delaySeconds: Int
+        get() = sp.getInt(KEY_DELAY_SECONDS, DEFAULT_DELAY_SECONDS)
+        set(value) {
+            sp.edit().putInt(KEY_DELAY_SECONDS, value.coerceIn(1, MAX_DELAY_SECONDS)).apply()
+        }
+
+    /** 间隔拍摄周期秒数（界面记忆） */
+    var intervalSeconds: Int
+        get() = sp.getInt(KEY_INTERVAL_SECONDS, DEFAULT_INTERVAL_SECONDS)
+        set(value) {
+            sp.edit().putInt(KEY_INTERVAL_SECONDS, value.coerceIn(1, MAX_INTERVAL_SECONDS)).apply()
+        }
+
+    /** 间隔拍摄张数（界面记忆） */
+    var intervalShots: Int
+        get() = sp.getInt(KEY_INTERVAL_SHOTS, DEFAULT_INTERVAL_SHOTS)
+        set(value) {
+            sp.edit().putInt(KEY_INTERVAL_SHOTS, value.coerceIn(1, MAX_INTERVAL_SHOTS)).apply()
+        }
+
+    companion object {
+        const val DEFAULT_SHUTTER_HOLD_MS = 150
+        const val MIN_SHUTTER_HOLD_MS = 20
+        const val MAX_SHUTTER_HOLD_MS = 2000
+
+        const val DEFAULT_DELAY_SECONDS = 5
+        const val MAX_DELAY_SECONDS = 3600
+
+        const val DEFAULT_INTERVAL_SECONDS = 5
+        const val MAX_INTERVAL_SECONDS = 3600
+
+        const val DEFAULT_INTERVAL_SHOTS = 10
+        const val MAX_INTERVAL_SHOTS = 9999
+
+        private const val KEY_DEVICE_ADDRESS = "device_address"
+        private const val KEY_DEVICE_NAME = "device_name"
+        private const val KEY_SHUTTER_HOLD_MS = "shutter_hold_ms"
+        private const val KEY_DELAY_SECONDS = "delay_seconds"
+        private const val KEY_INTERVAL_SECONDS = "interval_seconds"
+        private const val KEY_INTERVAL_SHOTS = "interval_shots"
+    }
+}
