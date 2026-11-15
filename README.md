@@ -91,3 +91,9 @@ app/src/main/java/com/cannonremote/app/
 - 部分国产 ROM（MIUI/EMUI/ColorOS 等）需要在系统设置中允许应用“后台运行/自启动”
   或锁屏不清理，否则前台服务也可能被提前回收。
 - 应用被用户手动划掉（部分 ROM 的“清理”动作）会连带取消拍摄，属系统行为。
+
+## License
+
+本项目基于 [Apache License 2.0](LICENSE) 发布。协议中参考的第三方项目：
+[ids1024/cannon-bluetooth-remote](https://github.com/ids1024/cannon-bluetooth-remote)（MIT）、
+[iebyt/cbremote](https://github.com/iebyt/cbremote)（Apache-2.0）。
