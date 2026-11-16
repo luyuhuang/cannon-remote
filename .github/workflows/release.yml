@@ -8,7 +8,8 @@
 # 未配置签名 Secret 时仍会构建，只是产出未签名 APK。
 #
 # 触发方式：git tag v1.0.0 && git push origin v1.0.0
-# （注意把 app/build.gradle.kts 里的 versionName/versionCode 与 tag 保持一致）
+# 版本号自动从 tag 推导（versionName = tag 去 v 前缀；versionCode = 主*1e6+次*1e3+修订），
+# 无需再手动改 app/build.gradle.kts。
 
 name: Release
 
