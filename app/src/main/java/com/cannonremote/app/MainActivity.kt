@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -349,18 +350,18 @@ private fun ControlsRow(state: ConnectionState, shooting: com.cannonremote.app.s
                 color = if (connected) MaterialTheme.colorScheme.secondary else Color(0xFF55555C),
             )
         }
-        // 快门按钮（按住拍摄，松开结束曝光）
+        // 快门按钮（按住拍摄，松开结束曝光）：快门光圈图标，避免误读为“录像”的实心圆
         HoldableCircleButton(
             size = 188.dp,
             enabled = connected,
             onDown = { shooting.pressShutter() },
             onUp = { shooting.releaseShutter() },
         ) {
-            Box(
-                modifier = Modifier
-                    .size(112.dp)
-                    .clip(CircleShape)
-                    .background(if (connected) MaterialTheme.colorScheme.primary else Color(0xFF553536)),
+            Icon(
+                painter = painterResource(R.drawable.ic_shutter),
+                contentDescription = "快门",
+                modifier = Modifier.size(112.dp),
+                tint = if (connected) MaterialTheme.colorScheme.primary else Color(0xFF55555C),
             )
         }
     }
