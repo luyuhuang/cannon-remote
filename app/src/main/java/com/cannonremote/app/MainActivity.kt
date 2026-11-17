@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.HapticFeedbackConstants
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -78,6 +80,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cannonremote.app.ble.ConnectionState
 import com.cannonremote.app.data.AppPrefs
+import com.cannonremote.app.data.VolumeKeyAction
 import com.cannonremote.app.shooting.DelayedState
 import com.cannonremote.app.shooting.IntervalState
 import com.cannonremote.app.ui.BlePermissions
@@ -111,6 +114,58 @@ class MainActivity : ComponentActivity() {
         ) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    // —— 音量键遥控（设置中映射后生效） ——
+
+    private val prefs get() = (application as CanonRemoteApp).prefs
+    private val shooting get() = (application as CanonRemoteApp).shooting
+
+    /** 该按键映射的功能；未映射音量键时返回 null（走系统默认行为） */
+    private fun mappedVolumeAction(keyCode: Int): VolumeKeyAction? = when (keyCode) {
+        KeyEvent.KEYCODE_VOLUME_UP -> prefs.volumeUpAction
+        KeyEvent.KEYCODE_VOLUME_DOWN -> prefs.volumeDownAction
+        else -> null
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        val action = mappedVolumeAction(keyCode)
+        if (action == null) return super.onKeyDown(keyCode, event)
+
+        // 长按重复事件只算一次；未连接时不执行动作
+        if (event.repeatCount == 0 &&
+            (application as CanonRemoteApp).ble.state.value is ConnectionState.Connected
+        ) {
+            window.decorView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            when (action) {
+                VolumeKeyAction.SHUTTER -> shooting.pressShutter()
+                VolumeKeyAction.FOCUS -> shooting.pressFocus()
+                VolumeKeyAction.DELAYED -> {
+                    maybeRequestNotificationPermission()
+                    shooting.startDelayedShot(prefs.delaySeconds)
+                }
+                VolumeKeyAction.INTERVAL ->
+                    if (shooting.intervalState.value.running) {
+                        shooting.stopIntervalShooting()
+                    } else {
+                        maybeRequestNotificationPermission()
+                        shooting.startIntervalShooting(prefs.intervalSeconds, prefs.intervalShots)
+                    }
+                VolumeKeyAction.NONE -> Unit
+            }
+        }
+        // 已映射的音量键不再调节系统音量
+        return true
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        when (mappedVolumeAction(keyCode)) {
+            // 按住期间持续“按下”，抬起发送“松开”，与界面按钮一致
+            VolumeKeyAction.SHUTTER -> shooting.releaseShutter()
+            VolumeKeyAction.FOCUS -> shooting.releaseFocus()
+            else -> return super.onKeyUp(keyCode, event)
+        }
+        return true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -235,7 +290,8 @@ private fun HintCard() {
                 "① 相机菜单：选择“连接至无线遥控器” → “添加要连接的设备”，即可进入配对模式\n" +
                 "② 应用内点击“扫描设备”，选择列表中的佳能相机即可配对连接\n" +
                 "③ 连接失败请先唤醒相机（半按快门或点亮屏幕）再重试\n" +
-                "④ 快门与 AF 支持按住：按住期间发送“按下”，松开发送“松开”",
+                "④ 快门与 AF 支持按住：按住期间发送“按下”，松开发送“松开”\n" +
+                "⑤ 音量键可在设置中映射为快门 / 对焦 / 延时拍摄 / 间隔拍摄",
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),

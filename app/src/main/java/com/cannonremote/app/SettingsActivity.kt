@@ -7,6 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.cannonremote.app.data.AppPrefs
+import com.cannonremote.app.data.VolumeKeyAction
 import com.cannonremote.app.ui.theme.CanonRemoteTheme
 
 class SettingsActivity : ComponentActivity() {
@@ -138,22 +142,6 @@ private fun SettingsScreen(app: CanonRemoteApp, onBack: () -> Unit) {
                         )
                     }
                 }
-
-                val showSaved = remember { mutableStateOf(false) }
-                androidx.compose.runtime.LaunchedEffect(savedTick) {
-                    if (savedTick > 0) {
-                        showSaved.value = true
-                        kotlinx.coroutines.delay(1500)
-                        showSaved.value = false
-                    }
-                }
-                if (showSaved.value) {
-                    Text(
-                        "已保存 ✓",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF4ADE80),
-                    )
-                }
             }
 
             Text(
@@ -162,6 +150,74 @@ private fun SettingsScreen(app: CanonRemoteApp, onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            // —— 音量键映射 ——
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("音量键", style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.secondary)
+
+                VolumeKeySettingRow(
+                    label = "音量+ 键",
+                    selected = app.prefs.volumeUpAction,
+                    onSelect = {
+                        app.prefs.volumeUpAction = it
+                        savedTick++
+                    },
+                )
+                VolumeKeySettingRow(
+                    label = "音量- 键",
+                    selected = app.prefs.volumeDownAction,
+                    onSelect = {
+                        app.prefs.volumeDownAction = it
+                        savedTick++
+                    },
+                )
+
+                Text(
+                    "在主界面按音量键即可触发对应功能，已设置时不再调节系统音量。" +
+                        "延时/间隔拍摄使用主界面记住的参数；设为“间隔拍摄”时，" +
+                        "按一下开始、再按一下停止。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            val showSaved = remember { mutableStateOf(false) }
+            androidx.compose.runtime.LaunchedEffect(savedTick) {
+                if (savedTick > 0) {
+                    showSaved.value = true
+                    kotlinx.coroutines.delay(1500)
+                    showSaved.value = false
+                }
+            }
+            if (showSaved.value) {
+                Text(
+                    "已保存 ✓",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF4ADE80),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun VolumeKeySettingRow(
+    label: String,
+    selected: VolumeKeyAction,
+    onSelect: (VolumeKeyAction) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            VolumeKeyAction.entries.forEach { action ->
+                FilterChip(
+                    selected = selected == action,
+                    onClick = { onSelect(action) },
+                    label = { Text(action.label) },
+                )
+            }
         }
     }
 }

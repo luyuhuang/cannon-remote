@@ -3,6 +3,20 @@ package com.cannonremote.app.data
 import android.content.Context
 import android.content.SharedPreferences
 
+/** 音量键可映射的遥控功能 */
+enum class VolumeKeyAction {
+    NONE, SHUTTER, FOCUS, DELAYED, INTERVAL;
+
+    /** 设置界面显示名 */
+    val label: String get() = when (this) {
+        NONE -> "无"
+        SHUTTER -> "快门"
+        FOCUS -> "对焦"
+        DELAYED -> "延时拍摄"
+        INTERVAL -> "间隔拍摄"
+    }
+}
+
 /** 应用偏好：记住的相机设备、拍摄参数。 */
 class AppPrefs(context: Context) {
 
@@ -61,6 +75,25 @@ class AppPrefs(context: Context) {
             sp.edit().putInt(KEY_INTERVAL_SHOTS, value.coerceIn(1, MAX_INTERVAL_SHOTS)).apply()
         }
 
+    /** 音量+ 键映射的功能（默认无） */
+    var volumeUpAction: VolumeKeyAction
+        get() = volumeAction(KEY_VOLUME_UP_ACTION)
+        set(value) {
+            sp.edit().putString(KEY_VOLUME_UP_ACTION, value.name).apply()
+        }
+
+    /** 音量- 键映射的功能（默认无） */
+    var volumeDownAction: VolumeKeyAction
+        get() = volumeAction(KEY_VOLUME_DOWN_ACTION)
+        set(value) {
+            sp.edit().putString(KEY_VOLUME_DOWN_ACTION, value.name).apply()
+        }
+
+    private fun volumeAction(key: String): VolumeKeyAction =
+        sp.getString(key, null)?.let { name ->
+            runCatching { VolumeKeyAction.valueOf(name) }.getOrNull()
+        } ?: VolumeKeyAction.NONE
+
     companion object {
         const val DEFAULT_SHUTTER_HOLD_MS = 150
         const val MIN_SHUTTER_HOLD_MS = 20
@@ -81,5 +114,7 @@ class AppPrefs(context: Context) {
         private const val KEY_DELAY_SECONDS = "delay_seconds"
         private const val KEY_INTERVAL_SECONDS = "interval_seconds"
         private const val KEY_INTERVAL_SHOTS = "interval_shots"
+        private const val KEY_VOLUME_UP_ACTION = "volume_up_action"
+        private const val KEY_VOLUME_DOWN_ACTION = "volume_down_action"
     }
 }
