@@ -121,10 +121,10 @@ class MainActivity : ComponentActivity() {
     private val prefs get() = (application as CanonRemoteApp).prefs
     private val shooting get() = (application as CanonRemoteApp).shooting
 
-    /** 该按键映射的功能；未映射音量键时返回 null（走系统默认行为） */
+    /** 该按键映射的功能；未映射或设为“无”时返回 null（走系统默认行为，可正常调节音量） */
     private fun mappedVolumeAction(keyCode: Int): VolumeKeyAction? = when (keyCode) {
-        KeyEvent.KEYCODE_VOLUME_UP -> prefs.volumeUpAction
-        KeyEvent.KEYCODE_VOLUME_DOWN -> prefs.volumeDownAction
+        KeyEvent.KEYCODE_VOLUME_UP -> prefs.volumeUpAction.takeIf { it != VolumeKeyAction.NONE }
+        KeyEvent.KEYCODE_VOLUME_DOWN -> prefs.volumeDownAction.takeIf { it != VolumeKeyAction.NONE }
         else -> null
     }
 

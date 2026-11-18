@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">佳能遥控</string>
+    <string name="volume_key_a11y_service_label">佳能遥控 · 音量键遥控</string>
+    <string name="volume_key_a11y_description">开启后，在“熄屏音量键仍可用”开启且相机已连接时，本服务会拦截音量键并转发为快门/对焦/延时/间隔拍摄等遥控功能；功能关闭时音量键保持原样。</string>
 </resources>

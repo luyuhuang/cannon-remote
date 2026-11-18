@@ -1,14 +1,14 @@
 package com.cannonremote.app
 
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,30 +21,43 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.cannonremote.app.data.AppPrefs
 import com.cannonremote.app.data.VolumeKeyAction
+import com.cannonremote.app.mediakey.VolumeKeyAccessibilityService
 import com.cannonremote.app.ui.theme.CanonRemoteTheme
 
 class SettingsActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 应用固定深色主题：强制状态栏/导航栏图标为浅色（白色）
@@ -65,7 +78,10 @@ class SettingsActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsScreen(app: CanonRemoteApp, onBack: () -> Unit) {
+private fun SettingsScreen(
+    app: CanonRemoteApp,
+    onBack: () -> Unit,
+) {
     var holdMsText by remember { mutableStateOf(app.prefs.shutterHoldMs.toString()) }
     var savedTick by remember { mutableIntStateOf(0) }
 
@@ -173,13 +189,69 @@ private fun SettingsScreen(app: CanonRemoteApp, onBack: () -> Unit) {
                     },
                 )
 
-                Text(
-                    "在主界面按音量键即可触发对应功能，已设置时不再调节系统音量。" +
-                        "延时/间隔拍摄使用主界面记住的参数；设为“间隔拍摄”时，" +
-                        "按一下开始、再按一下停止。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                // —— 熄屏音量键开关 ——
+                var screenOffKeys by remember { mutableStateOf(app.prefs.screenOffVolumeKeys) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("熄屏时音量键仍可用", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "需开启下方系统无障碍服务，相机已连接后生效。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = screenOffKeys,
+                        onCheckedChange = { checked ->
+                            screenOffKeys = checked
+                            app.prefs.screenOffVolumeKeys = checked
+                            savedTick++
+                        },
+                    )
+                }
+
+                // —— 无障碍按键服务状态（音量键拦截的必经之路） ——
+                val context = LocalContext.current
+                val a11yEnabled = remember { mutableStateOf(false) }
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            a11yEnabled.value =
+                                VolumeKeyAccessibilityService.isEnabled(context)
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (a11yEnabled.value) "系统无障碍服务：已开启 ✓"
+                            else "系统无障碍服务：未开启",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (a11yEnabled.value) Color(0xFF4ADE80)
+                            else MaterialTheme.colorScheme.error,
+                        )
+                        if (!a11yEnabled.value) {
+                            Text(
+                                "拦截音量键必须开启该服务，" +
+                                    "开启后音量键才会在应用外的界面生效",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    if (!a11yEnabled.value) {
+                        OutlinedButton(onClick = {
+                            runCatching {
+                                context.startActivity(Intent(ACTION_ACCESSIBILITY_SETTINGS))
+                            }
+                        }) {
+                            Text("去开启")
+                        }
+                    }
+                }
             }
 
             val showSaved = remember { mutableStateOf(false) }
@@ -201,21 +273,39 @@ private fun SettingsScreen(app: CanonRemoteApp, onBack: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VolumeKeySettingRow(
     label: String,
     selected: VolumeKeyAction,
     onSelect: (VolumeKeyAction) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = selected.label,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
             VolumeKeyAction.entries.forEach { action ->
-                FilterChip(
-                    selected = selected == action,
-                    onClick = { onSelect(action) },
-                    label = { Text(action.label) },
+                DropdownMenuItem(
+                    text = { Text(action.label) },
+                    onClick = {
+                        onSelect(action)
+                        expanded = false
+                    },
                 )
             }
         }

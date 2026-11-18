@@ -89,6 +89,16 @@ class AppPrefs(context: Context) {
             sp.edit().putString(KEY_VOLUME_DOWN_ACTION, value.name).apply()
         }
 
+    /**
+     * 熄屏/应用在后台时音量键仍可用。
+     * 由无障碍按键过滤服务（VolumeKeyAccessibilityService）在运行时读取生效。
+     */
+    var screenOffVolumeKeys: Boolean
+        get() = sp.getBoolean(KEY_SCREEN_OFF_VOLUME_KEYS, false)
+        set(value) {
+            sp.edit().putBoolean(KEY_SCREEN_OFF_VOLUME_KEYS, value).apply()
+        }
+
     private fun volumeAction(key: String): VolumeKeyAction =
         sp.getString(key, null)?.let { name ->
             runCatching { VolumeKeyAction.valueOf(name) }.getOrNull()
@@ -116,5 +126,6 @@ class AppPrefs(context: Context) {
         private const val KEY_INTERVAL_SHOTS = "interval_shots"
         private const val KEY_VOLUME_UP_ACTION = "volume_up_action"
         private const val KEY_VOLUME_DOWN_ACTION = "volume_down_action"
+        private const val KEY_SCREEN_OFF_VOLUME_KEYS = "screen_off_volume_keys"
     }
 }
