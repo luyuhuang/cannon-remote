@@ -55,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cannonremote.app.ble.ConnectionState
 import com.cannonremote.app.ble.isCanonDevice
@@ -271,10 +272,12 @@ private fun DeviceScreen(
             }
 
             Text(
-                "提示：若为首次配对，请先把相机蓝牙功能设为 Remote 并进入配对（Pairing）模式，" +
-                    "再点击下方列表中的相机；已配对的相机可直接点击连接。带“佳能”标记的是广播中含佳能服务的设备。",
+                "提示：首次配对时，请在相机菜单中选择“连接至无线遥控器” → " +
+                    "“添加要连接的设备”，进入配对模式后点击下方列表中的相机。" +
+                    "已配对的相机可直接点击连接。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp,
             )
 
             // —— 设备列表 ——
